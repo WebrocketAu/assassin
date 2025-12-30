@@ -6,6 +6,7 @@ const CLICKSEND_API_URL = 'https://rest.clicksend.com/v3/sms/send';
 const username = process.env.CLICKSEND_USERNAME;
 const apiKey = process.env.CLICKSEND_API_KEY;
 const fromNumber = process.env.CLICKSEND_FROM; // Optional - let ClickSend use default if not set
+const appUrl = process.env.APP_URL; // Base URL for player links in SMS messages
 
 let enabled = false;
 let authHeader = null;
@@ -16,6 +17,7 @@ if (username && apiKey) {
   console.log('ClickSend SMS enabled');
   console.log(`  Username: ${username}`);
   console.log(`  From: ${fromNumber || '(using ClickSend default)'}`);
+  console.log(`  APP_URL: ${appUrl || '(not set - links will be omitted from messages)'}`);
 } else {
   console.log('ClickSend credentials not found - SMS disabled (messages will be logged only)');
   console.log('  Set CLICKSEND_USERNAME and CLICKSEND_API_KEY environment variables to enable SMS');
@@ -112,30 +114,26 @@ export async function sendTestSMS(to, message) {
   return sendSMS(to, message || 'Test message from Assassin Game');
 }
 
-export async function sendGameStartMessage(player, target, task, baseUrl) {
-  // Note: URLs may be blocked for new ClickSend accounts
-  // If SMS fails, try removing the link
-  const link = `${baseUrl}/play/${player.token}`;
-  const body = `The game is on! Your target is: ${target.name}. Task: ${task || 'Tag them!'}\n\nYour player link: ${link}`;
+export async function sendGameStartMessage(player, target, task) {
+  let body = `The game is on! Your target is: ${target.name}. Task: ${task || 'Tag them!'}`;
+  
+  if (appUrl) {
+    const link = `${appUrl}/play/${player.token}`;
+    body += `\n\nYour player link: ${link}`;
+  }
+  
   return sendSMS(player.phone, body);
 }
 
-export async function sendGameStartMessageNoLink(player, target, task) {
-  // Alternative message without URL for accounts without URL approval
-  const body = `The game is on! Your target is: ${target.name}. Task: ${task || 'Tag them!'}`;
-  return sendSMS(player.phone, body);
-}
-
-export async function sendNewTargetMessage(player, newTarget, task, baseUrl) {
-  const link = `${baseUrl}/play/${player.token}`;
+export async function sendNewTargetMessage(player, newTarget, task) {
   const taskPart = task ? ` Task: ${task}` : '';
-  const body = `Kill confirmed! Your new target is: ${newTarget.name}.${taskPart}\n\nYour player link: ${link}`;
-  return sendSMS(player.phone, body);
-}
-
-export async function sendNewTargetMessageNoLink(player, newTarget, task) {
-  const taskPart = task ? ` Task: ${task}` : '';
-  const body = `Kill confirmed! Your new target is: ${newTarget.name}.${taskPart}`;
+  let body = `Kill confirmed! Your new target is: ${newTarget.name}.${taskPart}`;
+  
+  if (appUrl) {
+    const link = `${appUrl}/play/${player.token}`;
+    body += `\n\nYour player link: ${link}`;
+  }
+  
   return sendSMS(player.phone, body);
 }
 
@@ -149,14 +147,16 @@ export async function sendWinnerMessage(player) {
   return sendSMS(player.phone, body);
 }
 
-export async function sendKillRequestNotification(victim, killerName, baseUrl) {
-  const link = `${baseUrl}/play/${victim.token}`;
-  const body = `${killerName} claims they got you! Confirm if true: ${link}`;
-  return sendSMS(victim.phone, body);
-}
-
-export async function sendKillRequestNotificationNoLink(victim, killerName) {
-  const body = `${killerName} claims they got you! Open your player page to confirm.`;
+export async function sendKillRequestNotification(victim, killerName) {
+  let body;
+  
+  if (appUrl) {
+    const link = `${appUrl}/play/${victim.token}`;
+    body = `${killerName} claims they got you! Confirm if true: ${link}`;
+  } else {
+    body = `${killerName} claims they got you! Open your player page to confirm.`;
+  }
+  
   return sendSMS(victim.phone, body);
 }
 

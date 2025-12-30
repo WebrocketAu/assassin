@@ -9,7 +9,6 @@ import * as sms from './sms.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
-const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -17,7 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Helper to get base URL from request
 function getBaseUrl(req) {
-  return process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
 }
 
 // ============ SMS TEST ENDPOINT ============
@@ -270,13 +269,13 @@ app.post('/admin/:token/start', async (req, res) => {
   db.assignTargets(game.id);
   db.updateGameStatus(game.id, 'active');
 
-  // Send SMS to all players (using NoLink variant to avoid URL blocking)
+  // Send SMS to all players
   const updatedPlayers = db.getPlayersByGame(game.id);
 
   for (const player of updatedPlayers) {
     const target = db.getPlayerById(player.target_id);
     const playerTask = db.getPlayerTask(player.id);
-    await sms.sendGameStartMessageNoLink(player, target, playerTask?.description);
+    await sms.sendGameStartMessage(player, target, playerTask?.description);
   }
 
   res.redirect(`/admin/${game.admin_token}`);
@@ -292,7 +291,7 @@ app.post('/admin/:token/approve/:killId', async (req, res) => {
     await sms.sendEliminatedMessage(result.victim, result.killer.name);
 
     if (result.newTarget) {
-      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget, result.newTask?.description);
+      await sms.sendNewTargetMessage(result.killer, result.newTarget, result.newTask?.description);
     } else {
       // Game over - this killer won
       await sms.sendWinnerMessage(result.killer);
@@ -407,8 +406,8 @@ app.post('/play/:token/kill', async (req, res) => {
 
   db.createKillRequest(player.id, victim.id);
 
-  // Notify victim (using NoLink variant to avoid URL blocking)
-  await sms.sendKillRequestNotificationNoLink(victim, player.name);
+  // Notify victim
+  await sms.sendKillRequestNotification(victim, player.name);
 
   res.send(renderPage('Kill Submitted', `
     <h1>Kill Request Submitted!</h1>
@@ -431,7 +430,7 @@ app.post('/play/:token/confirm-death/:killId', async (req, res) => {
     await sms.sendEliminatedMessage(result.victim, result.killer.name);
 
     if (result.newTarget) {
-      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget, result.newTask?.description);
+      await sms.sendNewTargetMessage(result.killer, result.newTarget, result.newTask?.description);
     } else {
       await sms.sendWinnerMessage(result.killer);
     }
@@ -580,5 +579,4 @@ function renderPage(title, content) {
 
 app.listen(PORT, () => {
   console.log(`Assassin game running at http://localhost:${PORT}`);
-  console.log(`Set BASE_URL environment variable for SMS links (currently: ${BASE_URL})`);
 });
