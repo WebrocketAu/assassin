@@ -1,0 +1,16 @@
+{
+  "name": "assassin-game",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Party Assassin game with SQLite backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4"
+  }
+}
