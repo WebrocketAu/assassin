@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+
+# Database (will be stored in volume)
+*.db
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment files (use docker-compose environment instead)
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (no need to copy these into the image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+

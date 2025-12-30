@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  assassin:
+    build: .
+    image: assassin-game:latest
+    container_name: assassin-game
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Uncomment and set these for SMS functionality
+      # - CLICKSEND_USERNAME=your_username
+      # - CLICKSEND_API_KEY=your_api_key
+      # - CLICKSEND_FROM=Assassin
+      # Set this to your public URL if behind a reverse proxy
+      # - APP_URL=https://assassin.yourdomain.com
+    volumes:
+      # Persist the SQLite database
+      - assassin-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  assassin-data:
+    driver: local
+

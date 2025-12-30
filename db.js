@@ -1,7 +1,23 @@
 import Database from 'better-sqlite3';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-const db = new Database('assassin.db');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Use /app/data in production (Docker), otherwise local directory
+const dataDir = process.env.NODE_ENV === 'production' 
+  ? '/app/data' 
+  : __dirname;
+
+// Ensure data directory exists
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const dbPath = path.join(dataDir, 'assassin.db');
+const db = new Database(dbPath);
 
 // Initialize database schema
 db.exec(`
