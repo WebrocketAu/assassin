@@ -1,36 +1,24 @@
-# Build stage for native dependencies
-FROM node:20-alpine AS builder
-
-# Install build dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies (including dev for building native modules)
-RUN npm ci
-
-# Production stage
 FROM node:20-alpine
 
-# Install runtime dependencies for better-sqlite3
-RUN apk add --no-cache libstdc++
+# Install build dependencies for better-sqlite3 native module
+RUN apk add --no-cache python3 make g++ libstdc++
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for layer caching
 COPY package*.json ./
 
-# Copy node_modules from builder (includes compiled native modules)
-COPY --from=builder /app/node_modules ./node_modules
+# Install dependencies - this compiles better-sqlite3 for the target architecture
+RUN npm ci --only=production
 
 # Copy application code
 COPY . .
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data
+
+# Remove build dependencies to reduce image size
+RUN apk del python3 make g++
 
 # Expose port
 EXPOSE 3000
@@ -41,4 +29,3 @@ ENV PORT=3000
 
 # Start the application
 CMD ["node", "server.js"]
-
