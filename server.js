@@ -22,21 +22,20 @@ function getBaseUrl(req) {
 // ============ SMS TEST ENDPOINT ============
 app.get('/test-sms', (req, res) => {
   res.send(renderPage('Test SMS', `
-    <h1>Test SMS Integration</h1>
+    <h1>TEST SMS</h1>
     <div class="card">
       <form action="/test-sms" method="POST">
-        <input type="tel" name="phone" placeholder="Phone number (e.g., 0412345678)" required>
-        <input type="text" name="message" placeholder="Test message" value="Hello from Assassin Game!">
-        <button type="submit">Send Test SMS</button>
+        <input type="tel" name="phone" placeholder="Phone (e.g., 0412345678)" required>
+        <input type="text" name="message" placeholder="Message" value="Hello from Assassin!">
+        <button type="submit">SEND TEST</button>
       </form>
     </div>
     <div class="card">
-      <h2>Environment Check</h2>
-      <p>CLICKSEND_USERNAME: ${process.env.CLICKSEND_USERNAME ? '✅ Set' : '❌ Not set'}</p>
-      <p>CLICKSEND_API_KEY: ${process.env.CLICKSEND_API_KEY ? '✅ Set' : '❌ Not set'}</p>
-      <p>CLICKSEND_FROM: ${process.env.CLICKSEND_FROM || '(using default)'}</p>
+      <h2>CONFIG</h2>
+      <p>${process.env.CLICKSEND_USERNAME ? '✅' : '❌'} CLICKSEND_USERNAME</p>
+      <p>${process.env.CLICKSEND_API_KEY ? '✅' : '❌'} CLICKSEND_API_KEY</p>
+      <p>📤 FROM: ${process.env.CLICKSEND_FROM || '(default)'}</p>
     </div>
-    <p class="small">Check server console for detailed logs after sending.</p>
   `));
 });
 
@@ -48,29 +47,28 @@ app.post('/test-sms', async (req, res) => {
   console.log('========== END SMS TEST ==========\n');
   
   res.send(renderPage('Test SMS Result', `
-    <h1>SMS Test Result</h1>
-    <div class="card">
-      <p>Phone: ${phone}</p>
-      <p>Message: ${message}</p>
-      <p>Result: ${result ? '✅ Sent (or logged)' : '❌ Failed'}</p>
+    <h1>${result ? 'SENT!' : 'FAILED'}</h1>
+    <div class="card" style="text-align: center;">
+      <p style="font-size: 3rem; margin-bottom: 16px;">${result ? '✅' : '❌'}</p>
+      <p><strong>To:</strong> ${phone}</p>
+      <p><strong>Message:</strong> ${message}</p>
     </div>
-    <p>Check the server console for detailed logs.</p>
-    <a href="/test-sms" class="btn">Try Again</a>
+    <a href="/test-sms" class="btn">TRY AGAIN</a>
   `));
 });
 
 // ============ HOME PAGE ============
 app.get('/', (req, res) => {
   res.send(renderPage('Assassin Game', `
-    <h1>Assassin Game</h1>
-    <p>A party game of stealth and deception</p>
+    <h1>ASSASSIN</h1>
+    <p class="subtitle">Hunt. Eliminate. Survive.</p>
 
     <div class="card">
-      <h2>Create New Game</h2>
+      <h2>NEW GAME</h2>
       <form action="/create-game" method="POST">
-        <input type="text" name="name" placeholder="Game name (e.g., Birthday Party)" required>
-        <textarea name="tasks" placeholder="Tasks (one per line)&#10;e.g., Touch their shoulder and say 'You're dead!'&#10;Get them to high-five you&#10;Take a selfie with them" rows="5"></textarea>
-        <button type="submit">Create Game</button>
+        <input type="text" name="name" placeholder="Party name" required autocomplete="off">
+        <textarea name="tasks" placeholder="Kill tasks (one per line)&#10;&#10;e.g., High-five them&#10;Take a selfie together&#10;Get them to say 'banana'" rows="5"></textarea>
+        <button type="submit">CREATE GAME</button>
       </form>
     </div>
   `));
@@ -100,24 +98,35 @@ app.get('/join/:gameId', (req, res) => {
   const game = db.getGameById(req.params.gameId);
 
   if (!game) {
-    return res.status(404).send(renderPage('Not Found', '<h1>Game not found</h1><p><a href="/">Go home</a></p>'));
+    return res.status(404).send(renderPage('Not Found', `
+      <h1>OOPS</h1>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 3rem; margin-bottom: 16px;">🤷</p>
+        <p>Game not found</p>
+        <a href="/" class="btn" style="margin-top: 16px;">GO HOME</a>
+      </div>
+    `));
   }
 
   if (game.status !== 'waiting') {
     return res.send(renderPage('Game Started', `
-      <h1>${game.name}</h1>
-      <p>This game has already started. You can no longer join.</p>
+      <h1>TOO LATE</h1>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 3rem; margin-bottom: 16px;">😬</p>
+        <p>This game already started!</p>
+      </div>
     `));
   }
 
   res.send(renderPage(`Join ${game.name}`, `
-    <h1>Join ${game.name}</h1>
+    <h1>JOIN THE HUNT</h1>
+    <p class="subtitle">${game.name}</p>
 
     <div class="card">
       <form action="/join/${game.id}" method="POST">
-        <input type="text" name="name" placeholder="Your name" required>
-        <input type="tel" name="phone" placeholder="Phone number" required>
-        <button type="submit">Join Game</button>
+        <input type="text" name="name" placeholder="Your name" required autocomplete="off" autofocus>
+        <input type="tel" name="phone" placeholder="Phone number" required autocomplete="tel">
+        <button type="submit">I'M IN</button>
       </form>
     </div>
   `));
@@ -127,18 +136,26 @@ app.post('/join/:gameId', (req, res) => {
   const game = db.getGameById(req.params.gameId);
 
   if (!game || game.status !== 'waiting') {
-    return res.status(400).send(renderPage('Error', '<h1>Cannot join this game</h1>'));
+    return res.status(400).send(renderPage('Error', `
+      <h1>NOPE</h1>
+      <div class="card" style="text-align: center;">
+        <p>Can't join this game</p>
+      </div>
+    `));
   }
 
   const { name, phone } = req.body;
   const player = db.addPlayer(game.id, name, phone);
 
   res.send(renderPage('Joined!', `
-    <h1>You're in!</h1>
-    <p>Welcome, ${name}! You've joined <strong>${game.name}</strong>.</p>
-    <p>Wait for the game to start. You'll receive a text with your target!</p>
-    <p class="small">Bookmark this link to check your status:</p>
-    <a href="/play/${player.token}" class="btn">/play/${player.token}</a>
+    <h1>YOU'RE IN!</h1>
+    <div class="card" style="text-align: center;">
+      <p class="success-icon">🎯</p>
+      <p style="font-size: 1.4rem; color: #fff; margin-bottom: 8px;">Welcome, <strong>${name}</strong></p>
+      <p>Wait for game to start.<br>You'll get a text with your target!</p>
+    </div>
+    <a href="/play/${player.token}" class="btn">GET STARTED</a>
+    <p class="small">Bookmark that link ☝️</p>
   `));
 });
 
@@ -147,7 +164,12 @@ app.get('/admin/:token', async (req, res) => {
   const game = db.getGameByAdminToken(req.params.token);
 
   if (!game) {
-    return res.status(404).send(renderPage('Not Found', '<h1>Game not found</h1>'));
+    return res.status(404).send(renderPage('Not Found', `
+      <h1>NOPE</h1>
+      <div class="card" style="text-align: center;">
+        <p>Game not found</p>
+      </div>
+    `));
   }
 
   const players = db.getPlayersByGame(game.id);
@@ -160,70 +182,34 @@ app.get('/admin/:token', async (req, res) => {
   // Generate QR code
   let qrCodeDataUrl = '';
   try {
-    qrCodeDataUrl = await QRCode.toDataURL(joinUrl, { width: 200 });
+    qrCodeDataUrl = await QRCode.toDataURL(joinUrl, { width: 240 });
   } catch (err) {
     console.error('QR code error:', err);
   }
 
-  const statusBadge = game.status === 'waiting' ? '<span class="badge waiting">Waiting</span>' :
-                      game.status === 'active' ? '<span class="badge active">Active</span>' :
-                      '<span class="badge finished">Finished</span>';
+  const statusBadge = game.status === 'waiting' ? '<span class="badge waiting">WAITING</span>' :
+                      game.status === 'active' ? '<span class="badge active">LIVE</span>' :
+                      '<span class="badge finished">DONE</span>';
 
   res.send(renderPage(`Admin: ${game.name}`, `
-    <h1>${game.name} ${statusBadge}</h1>
-    ${tasks.length > 0 ? `
-      <div class="card">
-        <h2>Tasks (${tasks.length})</h2>
-        <ul class="task-list">
-          ${tasks.map(t => `<li>${t.description}</li>`).join('')}
-        </ul>
-      </div>
-    ` : ''}
-
-    <div class="card">
-      <h2>Join Link</h2>
-      <p><a href="${joinUrl}">${joinUrl}</a></p>
-      ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" class="qr-code">` : ''}
-    </div>
-
-    <div class="card">
-      <h2>Players (${players.length})</h2>
-      ${players.length === 0 ? '<p>No players yet</p>' : `
-        <ul class="player-list">
-          ${players.map(p => `
-            <li class="${p.is_alive ? '' : 'dead'}">
-              ${p.name} ${p.is_alive ? '' : '(eliminated)'}
-              <span class="phone">${p.phone}</span>
-            </li>
-          `).join('')}
-        </ul>
-      `}
-    </div>
-
-    ${game.status === 'waiting' ? `
-      <div class="card">
-        <h2>Start Game</h2>
-        ${players.length < 2 ? '<p>Need at least 2 players to start</p>' : `
-          <form action="/admin/${game.admin_token}/start" method="POST">
-            <button type="submit" class="btn-start">Start Game (${players.length} players)</button>
-          </form>
-        `}
-      </div>
-    ` : ''}
+    <h1>${game.name.toUpperCase()}</h1>
+    <p class="subtitle">${statusBadge}</p>
 
     ${pendingKills.length > 0 ? `
-      <div class="card">
-        <h2>Pending Kill Requests</h2>
+      <div class="card warning-card">
+        <h2>⚠️ PENDING KILLS</h2>
         <ul class="kill-list">
           ${pendingKills.map(kr => `
             <li>
-              <strong>${kr.killer_name}</strong> claims to have killed <strong>${kr.victim_name}</strong>
+              <p style="color: #fff; font-size: 1.1rem; margin: 0;">
+                <strong>${kr.killer_name}</strong> → <strong>${kr.victim_name}</strong>
+              </p>
               <div class="actions">
                 <form action="/admin/${game.admin_token}/approve/${kr.id}" method="POST" style="display:inline">
-                  <button type="submit" class="btn-small btn-approve">Approve</button>
+                  <button type="submit" class="btn-small btn-approve">✓ YES</button>
                 </form>
                 <form action="/admin/${game.admin_token}/reject/${kr.id}" method="POST" style="display:inline">
-                  <button type="submit" class="btn-small btn-reject">Reject</button>
+                  <button type="submit" class="btn-small btn-reject">✗ NO</button>
                 </form>
               </div>
             </li>
@@ -232,24 +218,65 @@ app.get('/admin/:token', async (req, res) => {
       </div>
     ` : ''}
 
+    ${game.status === 'waiting' ? `
+      <div class="card" style="text-align: center;">
+        <h2>JOIN QR</h2>
+        ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" class="qr-code">` : ''}
+        <p style="word-break: break-all; font-size: 0.9rem;"><a href="${joinUrl}">${joinUrl}</a></p>
+      </div>
+    ` : ''}
+
+    <div class="card">
+      <h2>PLAYERS ${players.length > 0 ? `(${players.length})` : ''}</h2>
+      ${players.length === 0 ? '<p style="text-align: center;">No players yet 😴</p>' : `
+        <ul class="player-list">
+          ${players.map(p => `
+            <li class="${p.is_alive ? '' : 'dead'}">
+              <span>${p.name}</span>
+              <span class="phone">${p.phone}</span>
+            </li>
+          `).join('')}
+        </ul>
+      `}
+    </div>
+
+    ${game.status === 'waiting' ? `
+      ${players.length < 2 ? `
+        <button disabled style="opacity: 0.5; cursor: not-allowed;">NEED 2+ PLAYERS</button>
+      ` : `
+        <form action="/admin/${game.admin_token}/start" method="POST">
+          <button type="submit" class="btn-start">🚀 START GAME</button>
+        </form>
+      `}
+    ` : ''}
+
     ${game.status !== 'waiting' ? `
       <div class="card">
-        <h2>Leaderboard</h2>
+        <h2>🏆 LEADERBOARD</h2>
         <table class="leaderboard">
-          <tr><th>#</th><th>Name</th><th>Kills</th><th>Status</th></tr>
+          <tr><th>#</th><th>PLAYER</th><th>KILLS</th><th></th></tr>
           ${leaderboard.map((p, i) => `
             <tr class="${p.is_alive ? '' : 'dead'}">
               <td>${i + 1}</td>
               <td>${p.name}</td>
               <td>${p.kills}</td>
-              <td>${p.is_alive ? 'Alive' : 'Eliminated'}</td>
+              <td>${p.is_alive ? '🟢' : '💀'}</td>
             </tr>
           `).join('')}
         </table>
       </div>
     ` : ''}
 
-    <p class="small">Bookmark this admin link - it's your only way back!</p>
+    ${tasks.length > 0 ? `
+      <div class="card">
+        <h2>TASKS</h2>
+        <ul class="task-list">
+          ${tasks.map(t => `<li>${t.description}</li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
+
+    <p class="small">🔖 Bookmark this page!</p>
   `));
 });
 
@@ -314,75 +341,83 @@ app.get('/play/:token', (req, res) => {
   const player = db.getPlayerByToken(req.params.token);
 
   if (!player) {
-    return res.status(404).send(renderPage('Not Found', '<h1>Player not found</h1>'));
+    return res.status(404).send(renderPage('Not Found', `
+      <h1>WHO?</h1>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 3rem; margin-bottom: 16px;">🤔</p>
+        <p>Player not found</p>
+      </div>
+    `));
   }
 
   const game = db.getGameById(player.game_id);
   const pendingKillAgainst = db.getPendingKillAgainstPlayer(player.id);
   const alivePlayers = db.getAlivePlayers(game.id);
 
-  let content = `<h1>${game.name}</h1>`;
+  let content = '';
 
   if (game.status === 'waiting') {
-    content += `
-      <div class="card">
-        <h2>Waiting for game to start...</h2>
-        <p>You're in, ${player.name}! The game master will start the game soon.</p>
-        <p>You'll receive a text when it begins.</p>
+    content = `
+      <h1>WAITING<span class="waiting-dots"></span></h1>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 3rem; margin-bottom: 16px;">⏳</p>
+        <p style="font-size: 1.3rem; color: #fff;">Hey ${player.name}!</p>
+        <p>Game starts soon.<br>You'll get a text!</p>
       </div>
     `;
   } else if (game.status === 'finished') {
     const winner = alivePlayers[0];
-    content += `
-      <div class="card">
-        <h2>Game Over!</h2>
-        <p>${winner.id === player.id ? "YOU WON!" : `${winner.name} won!`}</p>
-        <p>Your final kills: ${player.kills}</p>
+    const isWinner = winner && winner.id === player.id;
+    content = `
+      <h1>${isWinner ? 'YOU WON!' : 'GAME OVER'}</h1>
+      <div class="card" style="text-align: center;">
+        <p style="font-size: 4rem; margin-bottom: 16px;">${isWinner ? '👑' : '🏁'}</p>
+        ${!isWinner && winner ? `<p style="font-size: 1.3rem; color: #fff;">${winner.name} wins!</p>` : ''}
+        <p>Your kills: <strong style="color: var(--accent); font-size: 1.5rem;">${player.kills}</strong></p>
       </div>
     `;
   } else if (!player.is_alive) {
-    content += `
-      <div class="card dead-card">
-        <h2>You're Out!</h2>
-        <p>You've been eliminated from the game.</p>
-        <p>Final kills: ${player.kills}</p>
+    content = `
+      <h1>YOU'RE DEAD</h1>
+      <div class="card dead-card" style="text-align: center;">
+        <p style="font-size: 4rem; margin-bottom: 16px;">💀</p>
+        <p style="font-size: 1.2rem;">Better luck next time</p>
+        <p>Your kills: <strong style="color: var(--accent); font-size: 1.5rem;">${player.kills}</strong></p>
       </div>
     `;
   } else {
     const target = db.getPlayerById(player.target_id);
     const playerTask = db.getPlayerTask(player.id);
 
-    content += `
-      <div class="card target-card">
-        <h2>Your Target</h2>
-        <p class="target-name">${target ? target.name : 'No target'}</p>
-        ${playerTask ? `<p class="objective">Task: ${playerTask.description}</p>` : ''}
-      </div>
-
-      <div class="card">
-        <h2>Got Them?</h2>
-        <form action="/play/${player.token}/kill" method="POST">
-          <button type="submit" class="btn-kill">I Got Them!</button>
-        </form>
-      </div>
-    `;
-
+    // Warning card at top if someone claims to have killed them
     if (pendingKillAgainst) {
       content += `
-        <div class="card warning-card">
-          <h2>Confirm Your Death</h2>
-          <p><strong>${pendingKillAgainst.killer_name}</strong> claims they got you!</p>
+        <div class="card warning-card" style="text-align: center;">
+          <p style="font-size: 2.5rem; margin-bottom: 12px;">⚠️</p>
+          <h2>DID THEY GET YOU?</h2>
+          <p style="font-size: 1.3rem; color: #fff; margin-bottom: 16px;">${pendingKillAgainst.killer_name} says they killed you!</p>
           <form action="/play/${player.token}/confirm-death/${pendingKillAgainst.id}" method="POST">
-            <button type="submit" class="btn-confirm-death">Yes, They Got Me</button>
+            <button type="submit" class="btn-confirm-death">YEAH, I'M DEAD 💀</button>
           </form>
+          <p style="font-size: 0.85rem; color: #aaa; margin-top: 16px;">Disagree? Speak to the game admin to resolve any disputes.</p>
         </div>
       `;
     }
 
     content += `
+      <h1>YOUR TARGET</h1>
+      <div class="card target-card">
+        <p class="target-name">${target ? target.name : '???'}</p>
+        ${playerTask ? `<div class="objective"><strong>TASK:</strong> ${playerTask.description}</div>` : ''}
+      </div>
+
+      <form action="/play/${player.token}/kill" method="POST">
+        <button type="submit" class="btn btn-kill">GOT THEM! 🎯</button>
+      </form>
+
       <div class="stats">
-        <p>Your kills: ${player.kills}</p>
-        <p>Players remaining: ${alivePlayers.length}</p>
+        <p><strong>${player.kills}</strong>Kills</p>
+        <p><strong>${alivePlayers.length}</strong>Alive</p>
       </div>
     `;
   }
@@ -410,9 +445,12 @@ app.post('/play/:token/kill', async (req, res) => {
   await sms.sendKillRequestNotification(victim, player.name);
 
   res.send(renderPage('Kill Submitted', `
-    <h1>Kill Request Submitted!</h1>
-    <p>Waiting for ${victim.name} to confirm or admin to approve.</p>
-    <a href="/play/${player.token}" class="btn">Back to Game</a>
+    <h1>PENDING...</h1>
+    <div class="card" style="text-align: center;">
+      <p style="font-size: 3rem; margin-bottom: 16px;">⏳</p>
+      <p style="font-size: 1.2rem; color: #fff;">Waiting for <strong>${victim.name}</strong> to confirm</p>
+    </div>
+    <a href="/play/${player.token}" class="btn">BACK TO GAME</a>
   `));
 });
 
@@ -445,129 +483,403 @@ function renderPage(title, content) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>${title} | Assassin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-dark: #0d0d0d;
+      --bg-card: #1a1a1a;
+      --accent: #ff2d55;
+      --accent-glow: rgba(255, 45, 85, 0.4);
+      --success: #30d158;
+      --warning: #ff9f0a;
+      --text: #ffffff;
+      --text-dim: #8e8e93;
+      --border: #2c2c2e;
+    }
+    
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
-      color: #eee;
+      font-family: 'Outfit', -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
       min-height: 100vh;
-      padding: 20px;
+      min-height: 100dvh;
+      padding: 16px;
+      padding-bottom: 40px;
+      background-image: 
+        radial-gradient(ellipse at top, rgba(255, 45, 85, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at bottom right, rgba(255, 159, 10, 0.1) 0%, transparent 40%);
     }
-    h1 { margin-bottom: 10px; color: #e94560; }
-    h2 { margin-bottom: 15px; color: #fff; font-size: 1.2em; }
-    p { margin-bottom: 10px; line-height: 1.5; }
-    a { color: #e94560; }
+    
+    main {
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    
+    /* Typography */
+    h1 {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 3rem;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ff2d55, #ff6b8a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 0 60px var(--accent-glow);
+    }
+    
+    h2 {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    
+    p {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      color: var(--text-dim);
+    }
+    
+    p.subtitle {
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 24px;
+    }
+    
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    
+    /* Cards */
     .card {
-      background: #16213e;
-      padding: 20px;
-      border-radius: 10px;
-      margin: 20px 0;
-      border: 1px solid #0f3460;
+      background: var(--bg-card);
+      padding: 24px;
+      border-radius: 20px;
+      margin: 16px 0;
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
     }
+    
+    /* Forms */
     input, textarea {
       width: 100%;
-      padding: 12px;
-      margin-bottom: 10px;
-      border: 1px solid #0f3460;
-      border-radius: 5px;
-      background: #1a1a2e;
-      color: #fff;
-      font-size: 16px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
+    
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-glow);
+    }
+    
+    input::placeholder, textarea::placeholder {
+      color: var(--text-dim);
+    }
+    
+    /* Buttons */
     button, .btn {
-      display: inline-block;
-      padding: 12px 24px;
-      background: #e94560;
-      color: #fff;
+      display: block;
+      width: 100%;
+      padding: 20px 32px;
+      background: linear-gradient(135deg, var(--accent), #ff6b8a);
+      color: white;
       border: none;
-      border-radius: 5px;
-      font-size: 16px;
+      border-radius: 16px;
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 1.5rem;
+      letter-spacing: 2px;
       cursor: pointer;
       text-decoration: none;
       text-align: center;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 20px var(--accent-glow);
+      -webkit-tap-highlight-color: transparent;
     }
-    button:hover, .btn:hover { background: #ff6b6b; }
-    .btn-start { background: #4caf50; width: 100%; }
-    .btn-start:hover { background: #66bb6a; }
-    .btn-kill { background: #e94560; width: 100%; font-size: 1.2em; padding: 15px; }
-    .btn-confirm-death { background: #ff9800; width: 100%; }
-    .btn-small { padding: 8px 16px; font-size: 14px; margin: 5px; }
-    .btn-approve { background: #4caf50; }
-    .btn-reject { background: #f44336; }
-    .objective {
-      background: #0f3460;
-      padding: 10px;
-      border-radius: 5px;
-      font-style: italic;
-      margin: 10px 0;
+    
+    button:hover, .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--accent-glow);
     }
-    .target-name {
-      font-size: 2em;
-      color: #e94560;
+    
+    button:active, .btn:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-start {
+      background: linear-gradient(135deg, var(--success), #4ade80);
+      box-shadow: 0 4px 20px rgba(48, 209, 88, 0.4);
+    }
+    
+    .btn-kill {
+      font-size: 2rem;
+      padding: 28px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 4px 20px var(--accent-glow); }
+      50% { box-shadow: 0 4px 40px var(--accent-glow), 0 0 60px var(--accent-glow); }
+    }
+    
+    .btn-confirm-death {
+      background: linear-gradient(135deg, var(--warning), #ffc107);
+      box-shadow: 0 4px 20px rgba(255, 159, 10, 0.4);
+    }
+    
+    .btn-small {
+      display: inline-block;
+      width: auto;
+      padding: 14px 24px;
+      font-size: 1.1rem;
+      margin: 6px;
+      border-radius: 12px;
+    }
+    
+    .btn-approve {
+      background: linear-gradient(135deg, var(--success), #4ade80);
+      box-shadow: 0 4px 15px rgba(48, 209, 88, 0.4);
+    }
+    
+    .btn-reject {
+      background: linear-gradient(135deg, #ff3b30, #ff6b6b);
+      box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
+    }
+    
+    /* Target Display */
+    .target-card {
+      border: 2px solid var(--accent);
+      background: linear-gradient(180deg, rgba(255, 45, 85, 0.1) 0%, var(--bg-card) 100%);
       text-align: center;
-      padding: 20px;
     }
-    .target-card { border: 2px solid #e94560; }
-    .warning-card { border: 2px solid #ff9800; background: #2d2200; }
-    .dead-card { opacity: 0.7; }
+    
+    .target-name {
+      font-family: 'Bebas Neue', Impact, sans-serif;
+      font-size: 3.5rem;
+      letter-spacing: 3px;
+      color: var(--text);
+      padding: 20px 0;
+      text-shadow: 0 0 40px var(--accent-glow);
+    }
+    
+    .objective {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 16px;
+      font-size: 1rem;
+      color: var(--text);
+      border-left: 4px solid var(--warning);
+    }
+    
+    /* Warning Card */
+    .warning-card {
+      border: 2px solid var(--warning);
+      background: linear-gradient(180deg, rgba(255, 159, 10, 0.15) 0%, var(--bg-card) 100%);
+      animation: shake 0.5s ease-in-out;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    /* Dead State */
+    .dead-card {
+      opacity: 0.6;
+      filter: grayscale(0.5);
+    }
+    
+    /* Lists */
     .player-list { list-style: none; }
     .player-list li {
-      padding: 10px;
-      border-bottom: 1px solid #0f3460;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      font-size: 1.1rem;
     }
-    .player-list li.dead { opacity: 0.5; text-decoration: line-through; }
-    .phone { color: #888; font-size: 0.9em; }
+    .player-list li:last-child { border-bottom: none; }
+    .player-list li.dead { 
+      opacity: 0.4; 
+      text-decoration: line-through;
+    }
+    .phone { 
+      color: var(--text-dim); 
+      font-size: 0.9rem;
+      font-family: monospace;
+    }
+    
     .kill-list { list-style: none; }
     .kill-list li {
-      padding: 15px;
-      border-bottom: 1px solid #0f3460;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
     }
-    .kill-list .actions { margin-top: 10px; }
-    .task-list { list-style: decimal; margin-left: 20px; }
+    .kill-list li:last-child { border-bottom: none; }
+    .kill-list .actions { 
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+    }
+    
+    .task-list { 
+      list-style: none;
+      counter-reset: task;
+    }
     .task-list li {
-      padding: 8px 0;
-      border-bottom: 1px solid #0f3460;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      counter-increment: task;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 1rem;
+    }
+    .task-list li::before {
+      content: counter(task);
+      background: var(--accent);
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+      font-size: 0.9rem;
     }
     .task-list li:last-child { border-bottom: none; }
-    .leaderboard { width: 100%; border-collapse: collapse; }
-    .leaderboard th, .leaderboard td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #0f3460;
+    
+    /* Leaderboard */
+    .leaderboard { 
+      width: 100%; 
+      border-collapse: collapse;
     }
-    .leaderboard tr.dead { opacity: 0.5; }
+    .leaderboard th {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      text-align: left;
+      padding: 12px 8px;
+      border-bottom: 2px solid var(--border);
+    }
+    .leaderboard td {
+      padding: 14px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 1.1rem;
+    }
+    .leaderboard tr.dead { opacity: 0.4; }
+    .leaderboard td:first-child {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      color: var(--warning);
+    }
+    
+    /* Badges */
     .badge {
       display: inline-block;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 0.8em;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       vertical-align: middle;
     }
-    .badge.waiting { background: #ff9800; }
-    .badge.active { background: #4caf50; }
-    .badge.finished { background: #9e9e9e; }
+    .badge.waiting { background: var(--warning); color: #000; }
+    .badge.active { background: var(--success); color: #000; }
+    .badge.finished { background: var(--text-dim); }
+    
+    /* Stats */
     .stats {
       text-align: center;
-      margin-top: 20px;
-      color: #888;
+      margin-top: 24px;
+      padding: 20px;
+      background: var(--bg-card);
+      border-radius: 16px;
+      display: flex;
+      justify-content: space-around;
     }
+    .stats p {
+      margin: 0;
+      color: var(--text);
+    }
+    .stats strong {
+      display: block;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      color: var(--accent);
+    }
+    
+    /* QR Code */
     .qr-code {
       display: block;
-      margin: 10px auto;
+      margin: 16px auto;
       background: #fff;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 16px;
+      border-radius: 16px;
+      max-width: 220px;
     }
-    .small { font-size: 0.85em; color: #888; margin-top: 20px; }
+    
+    /* Helper text */
+    .small { 
+      font-size: 0.9rem; 
+      color: var(--text-dim); 
+      margin-top: 20px;
+      text-align: center;
+    }
+    
+    /* Success/joined state */
+    .success-icon {
+      font-size: 4rem;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    
+    /* Waiting animation */
+    .waiting-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: ''; }
+      40% { content: '.'; }
+      60% { content: '..'; }
+      80%, 100% { content: '...'; }
+    }
+    
+    /* Mobile optimizations */
+    @media (max-width: 480px) {
+      body { padding: 12px; }
+      h1 { font-size: 2.5rem; }
+      .card { padding: 20px; border-radius: 16px; }
+      .target-name { font-size: 2.8rem; }
+      .btn-kill { font-size: 1.6rem; padding: 24px; }
+    }
+    
+    /* Prevent zoom on input focus (iOS) */
     @media (max-width: 600px) {
-      body { padding: 10px; }
-      .card { padding: 15px; }
+      input, textarea, select { font-size: 16px !important; }
     }
   </style>
 </head>
