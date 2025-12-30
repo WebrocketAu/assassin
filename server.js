@@ -70,7 +70,7 @@ app.get('/', (req, res) => {
       <h2>Create New Game</h2>
       <form action="/create-game" method="POST">
         <input type="text" name="name" placeholder="Game name (e.g., Birthday Party)" required>
-        <textarea name="objective" placeholder="Kill objective (e.g., Touch their shoulder and say 'You're dead!')" rows="2"></textarea>
+        <textarea name="tasks" placeholder="Tasks (one per line)&#10;e.g., Touch their shoulder and say 'You're dead!'&#10;Get them to high-five you&#10;Take a selfie with them" rows="5"></textarea>
         <button type="submit">Create Game</button>
       </form>
     </div>
@@ -79,8 +79,20 @@ app.get('/', (req, res) => {
 
 // ============ CREATE GAME ============
 app.post('/create-game', (req, res) => {
-  const { name, objective } = req.body;
-  const game = db.createGame(name, objective);
+  const { name, tasks } = req.body;
+  const game = db.createGame(name, null); // No longer using single objective
+  
+  // Parse tasks from textarea (one per line)
+  if (tasks) {
+    const taskLines = tasks.split('\n')
+      .map(t => t.trim())
+      .filter(t => t.length > 0);
+    
+    for (const taskDescription of taskLines) {
+      db.addTask(game.id, taskDescription);
+    }
+  }
+  
   res.redirect(`/admin/${game.adminToken}`);
 });
 
@@ -101,7 +113,6 @@ app.get('/join/:gameId', (req, res) => {
 
   res.send(renderPage(`Join ${game.name}`, `
     <h1>Join ${game.name}</h1>
-    ${game.objective ? `<p class="objective">Objective: ${game.objective}</p>` : ''}
 
     <div class="card">
       <form action="/join/${game.id}" method="POST">
@@ -143,6 +154,7 @@ app.get('/admin/:token', async (req, res) => {
   const players = db.getPlayersByGame(game.id);
   const pendingKills = db.getPendingKillRequests(game.id);
   const leaderboard = db.getLeaderboard(game.id);
+  const tasks = db.getTasksByGame(game.id);
   const baseUrl = getBaseUrl(req);
   const joinUrl = `${baseUrl}/join/${game.id}`;
 
@@ -160,7 +172,14 @@ app.get('/admin/:token', async (req, res) => {
 
   res.send(renderPage(`Admin: ${game.name}`, `
     <h1>${game.name} ${statusBadge}</h1>
-    ${game.objective ? `<p class="objective">Objective: ${game.objective}</p>` : ''}
+    ${tasks.length > 0 ? `
+      <div class="card">
+        <h2>Tasks (${tasks.length})</h2>
+        <ul class="task-list">
+          ${tasks.map(t => `<li>${t.description}</li>`).join('')}
+        </ul>
+      </div>
+    ` : ''}
 
     <div class="card">
       <h2>Join Link</h2>
@@ -247,7 +266,7 @@ app.post('/admin/:token/start', async (req, res) => {
     return res.status(400).send(renderPage('Error', '<h1>Need at least 2 players</h1>'));
   }
 
-  // Assign circular targets
+  // Assign circular targets (also assigns random tasks)
   db.assignTargets(game.id);
   db.updateGameStatus(game.id, 'active');
 
@@ -256,7 +275,8 @@ app.post('/admin/:token/start', async (req, res) => {
 
   for (const player of updatedPlayers) {
     const target = db.getPlayerById(player.target_id);
-    await sms.sendGameStartMessageNoLink(player, target, game.objective);
+    const playerTask = db.getPlayerTask(player.id);
+    await sms.sendGameStartMessageNoLink(player, target, playerTask?.description);
   }
 
   res.redirect(`/admin/${game.admin_token}`);
@@ -272,7 +292,7 @@ app.post('/admin/:token/approve/:killId', async (req, res) => {
     await sms.sendEliminatedMessage(result.victim, result.killer.name);
 
     if (result.newTarget) {
-      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget);
+      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget, result.newTask?.description);
     } else {
       // Game over - this killer won
       await sms.sendWinnerMessage(result.killer);
@@ -331,12 +351,13 @@ app.get('/play/:token', (req, res) => {
     `;
   } else {
     const target = db.getPlayerById(player.target_id);
+    const playerTask = db.getPlayerTask(player.id);
 
     content += `
       <div class="card target-card">
         <h2>Your Target</h2>
         <p class="target-name">${target ? target.name : 'No target'}</p>
-        ${game.objective ? `<p class="objective">Objective: ${game.objective}</p>` : ''}
+        ${playerTask ? `<p class="objective">Task: ${playerTask.description}</p>` : ''}
       </div>
 
       <div class="card">
@@ -410,7 +431,7 @@ app.post('/play/:token/confirm-death/:killId', async (req, res) => {
     await sms.sendEliminatedMessage(result.victim, result.killer.name);
 
     if (result.newTarget) {
-      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget);
+      await sms.sendNewTargetMessageNoLink(result.killer, result.newTarget, result.newTask?.description);
     } else {
       await sms.sendWinnerMessage(result.killer);
     }
@@ -509,6 +530,12 @@ function renderPage(title, content) {
       border-bottom: 1px solid #0f3460;
     }
     .kill-list .actions { margin-top: 10px; }
+    .task-list { list-style: decimal; margin-left: 20px; }
+    .task-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #0f3460;
+    }
+    .task-list li:last-child { border-bottom: none; }
     .leaderboard { width: 100%; border-collapse: collapse; }
     .leaderboard th, .leaderboard td {
       padding: 10px;

@@ -112,28 +112,30 @@ export async function sendTestSMS(to, message) {
   return sendSMS(to, message || 'Test message from Assassin Game');
 }
 
-export async function sendGameStartMessage(player, target, objective, baseUrl) {
+export async function sendGameStartMessage(player, target, task, baseUrl) {
   // Note: URLs may be blocked for new ClickSend accounts
   // If SMS fails, try removing the link
   const link = `${baseUrl}/play/${player.token}`;
-  const body = `The game is on! Your target is: ${target.name}. Objective: ${objective || 'Tag them!'}\n\nYour player link: ${link}`;
+  const body = `The game is on! Your target is: ${target.name}. Task: ${task || 'Tag them!'}\n\nYour player link: ${link}`;
   return sendSMS(player.phone, body);
 }
 
-export async function sendGameStartMessageNoLink(player, target, objective) {
+export async function sendGameStartMessageNoLink(player, target, task) {
   // Alternative message without URL for accounts without URL approval
-  const body = `The game is on! Your target is: ${target.name}. Objective: ${objective || 'Tag them!'}`;
+  const body = `The game is on! Your target is: ${target.name}. Task: ${task || 'Tag them!'}`;
   return sendSMS(player.phone, body);
 }
 
-export async function sendNewTargetMessage(player, newTarget, baseUrl) {
+export async function sendNewTargetMessage(player, newTarget, task, baseUrl) {
   const link = `${baseUrl}/play/${player.token}`;
-  const body = `Kill confirmed! Your new target is: ${newTarget.name}\n\nYour player link: ${link}`;
+  const taskPart = task ? ` Task: ${task}` : '';
+  const body = `Kill confirmed! Your new target is: ${newTarget.name}.${taskPart}\n\nYour player link: ${link}`;
   return sendSMS(player.phone, body);
 }
 
-export async function sendNewTargetMessageNoLink(player, newTarget) {
-  const body = `Kill confirmed! Your new target is: ${newTarget.name}`;
+export async function sendNewTargetMessageNoLink(player, newTarget, task) {
+  const taskPart = task ? ` Task: ${task}` : '';
+  const body = `Kill confirmed! Your new target is: ${newTarget.name}.${taskPart}`;
   return sendSMS(player.phone, body);
 }
 

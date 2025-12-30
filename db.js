@@ -37,7 +37,21 @@ db.exec(`
     FOREIGN KEY (killer_id) REFERENCES players(id),
     FOREIGN KEY (victim_id) REFERENCES players(id)
   );
+
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game_id TEXT NOT NULL,
+    description TEXT NOT NULL,
+    FOREIGN KEY (game_id) REFERENCES games(id)
+  );
 `);
+
+// Add current_task_id column to players if it doesn't exist
+try {
+  db.exec(`ALTER TABLE players ADD COLUMN current_task_id INTEGER REFERENCES tasks(id)`);
+} catch (e) {
+  // Column already exists, ignore
+}
 
 // Helper to generate tokens
 export function generateToken() {
@@ -66,6 +80,34 @@ export function getGameByAdminToken(token) {
 
 export function updateGameStatus(id, status) {
   db.prepare('UPDATE games SET status = ? WHERE id = ?').run(status, id);
+}
+
+// Task functions
+export function addTask(gameId, description) {
+  const result = db.prepare('INSERT INTO tasks (game_id, description) VALUES (?, ?)').run(gameId, description);
+  return { id: result.lastInsertRowid, game_id: gameId, description };
+}
+
+export function getTasksByGame(gameId) {
+  return db.prepare('SELECT * FROM tasks WHERE game_id = ?').all(gameId);
+}
+
+export function getRandomTask(gameId) {
+  const tasks = getTasksByGame(gameId);
+  if (tasks.length === 0) return null;
+  return tasks[Math.floor(Math.random() * tasks.length)];
+}
+
+export function setPlayerTask(playerId, taskId) {
+  db.prepare('UPDATE players SET current_task_id = ? WHERE id = ?').run(taskId, playerId);
+}
+
+export function getPlayerTask(playerId) {
+  return db.prepare(`
+    SELECT t.* FROM tasks t
+    JOIN players p ON p.current_task_id = t.id
+    WHERE p.id = ?
+  `).get(playerId);
 }
 
 // Player functions
@@ -154,6 +196,7 @@ function shuffleArray(array) {
 }
 
 // Assign circular targets: 1→2→3→...→n→1
+// Also assigns a random task to each player
 export function assignTargets(gameId) {
   const players = getPlayersByGame(gameId);
   if (players.length < 2) return false;
@@ -163,6 +206,12 @@ export function assignTargets(gameId) {
   for (let i = 0; i < shuffled.length; i++) {
     const nextIndex = (i + 1) % shuffled.length;
     setPlayerTarget(shuffled[i].id, shuffled[nextIndex].id);
+    
+    // Assign a random task to each player
+    const task = getRandomTask(gameId);
+    if (task) {
+      setPlayerTask(shuffled[i].id, task.id);
+    }
   }
 
   return true;
@@ -184,6 +233,12 @@ export function processKill(killRequestId) {
   // Killer gets victim's target
   setPlayerTarget(killer.id, victim.target_id);
 
+  // Assign a new random task to the killer
+  const newTask = getRandomTask(killer.game_id);
+  if (newTask) {
+    setPlayerTask(killer.id, newTask.id);
+  }
+
   // Increment killer's kills
   incrementKills(killer.id);
 
@@ -196,7 +251,7 @@ export function processKill(killRequestId) {
     updateGameStatus(killer.game_id, 'finished');
   }
 
-  return { killer, victim, newTarget: getPlayerById(victim.target_id) };
+  return { killer, victim, newTarget: getPlayerById(victim.target_id), newTask };
 }
 
 export function getLeaderboard(gameId) {
